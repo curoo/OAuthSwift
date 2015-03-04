@@ -10,7 +10,7 @@ import Foundation
 
 import UIKit
 
-protocol WebViewProtocol {
+public protocol WebViewProtocol {
     func setUrl(url: NSURL)
 }
 
