@@ -57,8 +57,8 @@ public class OAuth1Swift: NSObject {
             if ( self.webViewController != nil ) {
                 if let webView = self.webViewController as? WebViewProtocol {
                     webView.setUrl(queryURL!)
-                    UIApplication.sharedApplication().keyWindow?.rootViewController?.presentViewController(
-                        self.webViewController!, animated: true, completion: nil)
+                    (UIApplication.sharedApplication().keyWindow?.rootViewController as! UINavigationController).pushViewController(
+                        self.webViewController!, animated: true)
                 }
             } else {
                 UIApplication.sharedApplication().openURL(queryURL!)
