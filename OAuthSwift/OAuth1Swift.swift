@@ -13,19 +13,19 @@ import UIKit
 public let OAuthSwiftErrorDomain = "oauthswift.error"
 
 public class OAuth1Swift: NSObject {
-
+    
     public var client: OAuthSwiftClient
-
+    
     public var webViewController: UIViewController?
-
+    
     public var consumer_key: String
     public var consumer_secret: String
     public var request_token_url: String
     public var authorize_url: String
     public var access_token_url: String
-
+    
     var observer: AnyObject?
-
+    
     public init(consumerKey: String, consumerSecret: String, requestTokenUrl: String, authorizeUrl: String, accessTokenUrl: String){
         self.consumer_key = consumerKey
         self.consumer_secret = consumerSecret
@@ -34,20 +34,20 @@ public class OAuth1Swift: NSObject {
         self.access_token_url = accessTokenUrl
         self.client = OAuthSwiftClient(consumerKey: consumerKey, consumerSecret: consumerSecret)
     }
-
+    
     struct CallbackNotification {
         static let notificationName = "OAuthSwiftCallbackNotificationName"
         static let optionsURLKey = "OAuthSwiftCallbackNotificationOptionsURLKey"
     }
-
+    
     struct OAuthSwiftError {
         static let domain = "OAuthSwiftErrorDomain"
         static let appOnlyAuthenticationErrorCode = 1
     }
-
+    
     public typealias TokenSuccessHandler = (credential: OAuthSwiftCredential, response: NSURLResponse) -> Void
     public typealias FailureHandler = (error: NSError) -> Void
-
+    
     // 0. Start
     public func authorizeWithCallbackURL(callbackURL: NSURL, success: TokenSuccessHandler, failure: ((error: NSError) -> Void)) {
         self.postOAuthRequestTokenWithCallbackURL(callbackURL, success: { credential, response in
@@ -57,16 +57,16 @@ public class OAuth1Swift: NSObject {
             if ( self.webViewController != nil ) {
                 if let webView = self.webViewController as? WebViewProtocol {
                     webView.setUrl(queryURL!)
-                    UIApplication.sharedApplication().topViewController()!.presentViewController(
-                        self.webViewController!, animated: true, completion: nil)
+                    (UIApplication.sharedApplication().keyWindow?.rootViewController as! UINavigationController).pushViewController(
+                        self.webViewController!, animated: true)
                 }
             } else {
                 UIApplication.sharedApplication().openURL(queryURL!)
             }
             }, failure: failure)
     }
-
-
+    
+    
     func setupCallBackObserver(success: TokenSuccessHandler, failure: FailureHandler) {
         self.observer = NSNotificationCenter.defaultCenter().addObserverForName(CallbackNotification.notificationName, object: nil, queue: NSOperationQueue.mainQueue(), usingBlock:{
             notification in
@@ -91,8 +91,8 @@ public class OAuth1Swift: NSObject {
             return
         })
     }
-
-
+    
+    
     // 1. Request token
     public func postOAuthRequestTokenWithCallbackURL(callbackURL: NSURL, success: TokenSuccessHandler, failure: FailureHandler?) {
         var parameters =  Dictionary<String, AnyObject>()
@@ -105,7 +105,7 @@ public class OAuth1Swift: NSObject {
             self.handleRequestTokenResponse(data, response: response, success: success, failure: failure)
             }, failure: failure)
     }
-
+    
     public func handleRequestTokenResponse(data: NSData, response: NSHTTPURLResponse, success: TokenSuccessHandler, failure: FailureHandler?) {
         let responseString = NSString(data: data, encoding: NSUTF8StringEncoding) as! String
         let parameters = responseString.parametersFromQueryString()
@@ -113,7 +113,7 @@ public class OAuth1Swift: NSObject {
         self.client.credential.oauth_token_secret = parameters["oauth_token_secret"]!
         success(credential: self.client.credential, response: response)
     }
-
+    
     // 3. Get Access token
     public func postOAuthAccessTokenWithRequestToken(success: TokenSuccessHandler, failure: FailureHandler?) {
         var parameters = Dictionary<String, AnyObject>()
@@ -124,7 +124,7 @@ public class OAuth1Swift: NSObject {
             self.handleAccessTokenResponseData(data, response: response, success: success, failure: failure)
             }, failure: failure)
     }
-
+    
     public func handleAccessTokenResponseData(data: NSData, response: NSHTTPURLResponse, success: TokenSuccessHandler, failure: FailureHandler?) {
         let responseString = NSString(data: data, encoding: NSUTF8StringEncoding) as! String
         let parameters = responseString.parametersFromQueryString()
@@ -133,32 +133,15 @@ public class OAuth1Swift: NSObject {
         self.handleAccessTokenReceived(self.client.credential)
         success(credential: self.client.credential, response: response)
     }
-
+    
     public class func handleOpenURL(url: NSURL) {
         let notification = NSNotification(name: CallbackNotification.notificationName, object: nil,
             userInfo: [CallbackNotification.optionsURLKey: url])
         NSNotificationCenter.defaultCenter().postNotification(notification)
     }
-
+    
     public func handleAccessTokenReceived(credential: OAuthSwiftCredential) {
-
+        
     }
-
-}
-
-extension UIApplication {
-    func topViewController(base: UIViewController? = UIApplication.sharedApplication().keyWindow?.rootViewController) -> UIViewController? {
-        if let nav = base as? UINavigationController {
-            return topViewController(base: nav.visibleViewController)
-        }
-        if let tab = base as? UITabBarController {
-            if let selected = tab.selectedViewController {
-                return topViewController(base: selected)
-            }
-        }
-        if let presented = base?.presentedViewController {
-            return topViewController(base: presented)
-        }
-        return base
-    }
+    
 }
