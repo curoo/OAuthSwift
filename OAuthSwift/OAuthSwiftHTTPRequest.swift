@@ -67,13 +67,19 @@ public class OAuthSwiftHTTPRequest: NSObject, NSURLConnectionDataDelegate {
     }
     
     func start() {
-        if (request == nil) {
-            var error: NSError?
-            
-            self.request = OAuthSwiftHTTPRequest.makeRequest(self.URL, method: self.HTTPMethod, headers: self.headers, parameters: self.parameters, dataEncoding: self.dataEncoding, encodeParameters: self.encodeParameters, error: &error, body: self.HTTPBodyMultipart, contentType: self.contentTypeMultipart)
-                
-            if ((error) != nil) {
-                println(error!.localizedDescription)
+        if request == nil {
+            do {
+                self.request = try OAuthSwiftHTTPRequest.makeRequest(self.URL,
+                    method: self.HTTPMethod,
+                    headers: self.headers,
+                    parameters: self.parameters,
+                    dataEncoding: self.dataEncoding,
+                    encodeParameters: self.encodeParameters,
+                    body: self.HTTPBodyMultipart,
+                    contentType: self.contentTypeMultipart)
+            }
+            catch let error as NSError {
+                print(error.localizedDescription)
             }
         }
         
@@ -93,12 +99,11 @@ public class OAuthSwiftHTTPRequest: NSObject, NSURLConnectionDataDelegate {
         parameters: Dictionary<String, AnyObject>,
         dataEncoding: NSStringEncoding,
         encodeParameters: Bool,
-        error: NSErrorPointer,
         body: NSData? = nil,
-        contentType: String? = nil) -> NSMutableURLRequest? {
+        contentType: String? = nil) throws -> NSMutableURLRequest {
             let request = NSMutableURLRequest(URL: URL)
             request.HTTPMethod = method
-            return self.setupRequestForOAuth(request, headers: headers, parameters: parameters, dataEncoding: dataEncoding, encodeParameters: encodeParameters, error: error, body: body, contentType: contentType)
+            return try self.setupRequestForOAuth(request, headers: headers, parameters: parameters, dataEncoding: dataEncoding, encodeParameters: encodeParameters, body: body, contentType: contentType)
     }
 
 
@@ -107,61 +112,50 @@ public class OAuthSwiftHTTPRequest: NSObject, NSURLConnectionDataDelegate {
         parameters: Dictionary<String, AnyObject>,
         dataEncoding: NSStringEncoding,
         encodeParameters: Bool,
-        error: NSErrorPointer,
         body: NSData? = nil,
-        contentType: String? = nil) -> NSMutableURLRequest? {
+        contentType: String? = nil) throws -> NSMutableURLRequest {
+        for (key, value) in headers {
+            URLRequest.setValue(value, forHTTPHeaderField: key)
+        }
 
-            for (key, value) in headers {
-                URLRequest.setValue(value, forHTTPHeaderField: key)
-            }
-            
-            let charset = CFStringConvertEncodingToIANACharSetName(CFStringConvertNSStringEncodingToEncoding(dataEncoding))
-            
-            var nonOAuthParameters = parameters.filter { key, _ in !key.hasPrefix("oauth_") }
-            
-            if (body != nil && contentType != nil) {
-                URLRequest.setValue(contentType!, forHTTPHeaderField: "Content-Type")
-                //request!.setValue(self.HTTPBodyMultipart!.length.description, forHTTPHeaderField: "Content-Length")
-                URLRequest.HTTPBody = body!
-            } else {
-                if nonOAuthParameters.count > 0 {
-                    if URLRequest.HTTPMethod == "GET" || URLRequest.HTTPMethod == "HEAD" || URLRequest.HTTPMethod == "DELETE" {
+        let charset = CFStringConvertEncodingToIANACharSetName(CFStringConvertNSStringEncodingToEncoding(dataEncoding))
+
+        let nonOAuthParameters = parameters.filter { key, _ in !key.hasPrefix("oauth_") }
+
+        if (body != nil && contentType != nil) {
+            URLRequest.setValue(contentType!, forHTTPHeaderField: "Content-Type")
+            //request!.setValue(self.HTTPBodyMultipart!.length.description, forHTTPHeaderField: "Content-Length")
+            URLRequest.HTTPBody = body!
+        } else {
+            if nonOAuthParameters.count > 0 {
+                if URLRequest.HTTPMethod == "GET" || URLRequest.HTTPMethod == "HEAD" || URLRequest.HTTPMethod == "DELETE" {
+                    let queryString = nonOAuthParameters.urlEncodedQueryStringWithEncoding(dataEncoding)
+                    let URL = URLRequest.URL!
+                    URLRequest.URL = URL.URLByAppendingQueryString(queryString)
+                    URLRequest.setValue("application/x-www-form-urlencoded; charset=\(charset)", forHTTPHeaderField: "Content-Type")
+                }
+                else {
+                    if (encodeParameters) {
                         let queryString = nonOAuthParameters.urlEncodedQueryStringWithEncoding(dataEncoding)
-                        let URL = URLRequest.URL!
-                        URLRequest.URL = URL.URLByAppendingQueryString(queryString)
+                        //self.request!.URL = self.URL.URLByAppendingQueryString(queryString)
                         URLRequest.setValue("application/x-www-form-urlencoded; charset=\(charset)", forHTTPHeaderField: "Content-Type")
+                        URLRequest.HTTPBody = queryString.dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: true)
                     }
                     else {
-                        if (encodeParameters) {
-                            let queryString = nonOAuthParameters.urlEncodedQueryStringWithEncoding(dataEncoding)
-                            //self.request!.URL = self.URL.URLByAppendingQueryString(queryString)
-                            URLRequest.setValue("application/x-www-form-urlencoded; charset=\(charset)", forHTTPHeaderField: "Content-Type")
-                            URLRequest.HTTPBody = queryString.dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: true)
-                        }
-                        else {
-                            var jsonError: NSError?
-                            if let jsonData: NSData = NSJSONSerialization.dataWithJSONObject(nonOAuthParameters, options: nil, error: &jsonError)  {
-                                URLRequest.setValue("application/json; charset=\(charset)", forHTTPHeaderField: "Content-Type")
-                                URLRequest.HTTPBody = jsonData
-                            }
-                            else {
-                                if (error != nil) {
-                                    //println(jsonError!.localizedDescription)
-                                    error.memory = jsonError
-                                }
-                                return nil
-                            }
-                        }
+                        let jsonData = try NSJSONSerialization.dataWithJSONObject(nonOAuthParameters, options: [])
+                        URLRequest.setValue("application/json; charset=\(charset)", forHTTPHeaderField: "Content-Type")
+                        URLRequest.HTTPBody = jsonData
                     }
                 }
             }
-            return URLRequest
+        }
+        return URLRequest
     }
-    
+
 
     public func connection(connection: NSURLConnection, didReceiveResponse response: NSURLResponse) {
         self.response = response as? NSHTTPURLResponse
-        
+
         self.responseData.length = 0
     }
     
@@ -187,7 +181,7 @@ public class OAuthSwiftHTTPRequest: NSObject, NSURLConnectionDataDelegate {
         
         if self.response.statusCode >= 400 {
             let responseString = NSString(data: self.responseData, encoding: self.dataEncoding)
-            let localizedDescription = OAuthSwiftHTTPRequest.descriptionForHTTPStatus(self.response.statusCode, responseString: responseString! as! String)
+            let localizedDescription = OAuthSwiftHTTPRequest.descriptionForHTTPStatus(self.response.statusCode, responseString: responseString! as String)
             let userInfo : [NSObject : AnyObject] = [NSLocalizedDescriptionKey: localizedDescription, "Response-Headers": self.response.allHeaderFields]
             let error = NSError(domain: NSURLErrorDomain, code: self.response.statusCode, userInfo: userInfo)
             self.failureHandler?(error: error)
@@ -209,7 +203,7 @@ public class OAuthSwiftHTTPRequest: NSObject, NSURLConnectionDataDelegate {
             }
         }
         
-        return NSString(data: data, encoding: encoding)! as! String
+        return NSString(data: data, encoding: encoding)! as String
     }
     
     class func descriptionForHTTPStatus(status: Int, responseString: String) -> String {
