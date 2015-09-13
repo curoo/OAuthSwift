@@ -18,7 +18,7 @@ class SHA1 {
     
     /** Common part for hash calculation. Prepare header data. */
     func prepare(_ len:Int = 64) -> NSMutableData {
-        var tmpMessage: NSMutableData = NSMutableData(data: self.message)
+        let tmpMessage: NSMutableData = NSMutableData(data: self.message)
         
         // Step 1. Append Padding Bits
         tmpMessage.appendBytes([0x80]) // append one bit (Byte with one bit) to message
@@ -69,7 +69,7 @@ class SHA1 {
                     M[x] = le.bigEndian
                     break
                 default:
-                    M[x] = rotateLeft(M[x-3] ^ M[x-8] ^ M[x-14] ^ M[x-16], 1)
+                    M[x] = rotateLeft(M[x-3] ^ M[x-8] ^ M[x-14] ^ M[x-16], n: 1)
                     break
                 }
             }
@@ -106,10 +106,10 @@ class SHA1 {
                     break
                 }
                 
-                var temp = (rotateLeft(A,5) &+ f &+ E &+ M[j] &+ k) & 0xffffffff
+                var temp = (rotateLeft(A,n: 5) &+ f &+ E &+ M[j] &+ k) & 0xffffffff
                 E = D
                 D = C
-                C = rotateLeft(B, 30)
+                C = rotateLeft(B, n: 30)
                 B = A
                 A = temp
                 
