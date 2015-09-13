@@ -117,7 +117,7 @@ public class OAuth2Swift: NSObject {
         if self.content_type == "multipart/form-data" {
             self.client.postMultiPartRequest(self.access_token_url!, method: "POST", parameters: parameters, success: {
                 data, response in
-                var responseJSON: AnyObject? = try? NSJSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions.MutableContainers)
+                let responseJSON: AnyObject? = try? NSJSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions.MutableContainers)
                 
                 let responseParameters: NSDictionary
                 
@@ -136,7 +136,7 @@ public class OAuth2Swift: NSObject {
         } else {
             self.client.post(self.access_token_url!, parameters: parameters, success: {
                 data, response in
-                var responseJSON: AnyObject? = try? NSJSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions.MutableContainers)
+                let responseJSON: AnyObject? = try? NSJSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions.MutableContainers)
 
                 let responseParameters: NSDictionary
 

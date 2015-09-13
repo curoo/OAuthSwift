@@ -28,11 +28,11 @@ public class HMAC {
         
         //
         var opad = [UInt8](count: 64, repeatedValue: 0x5c)
-        for (idx, val) in key.enumerate() {
+        for (idx, _) in key.enumerate() {
             opad[idx] = key[idx] ^ opad[idx]
         }
         var ipad = [UInt8](count: 64, repeatedValue: 0x36)
-        for (idx, val) in key.enumerate() {
+        for (idx, _) in key.enumerate() {
             ipad[idx] = key[idx] ^ ipad[idx]
         }
         

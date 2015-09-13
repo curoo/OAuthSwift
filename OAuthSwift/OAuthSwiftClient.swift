@@ -174,7 +174,7 @@ public class OAuthSwiftClient {
         for (key, value) in object {
 
             var valueData: NSData?
-            let valueType: String?
+            //let valueType: String?
             let filenameClause = ""
 
             let stringValue = "\(value)"
@@ -187,11 +187,12 @@ public class OAuthSwiftClient {
             let contentDispositionString = "Content-Disposition: form-data; name=\"\(key)\";\(filenameClause)\r\n"
             let contentDispositionData = contentDispositionString.dataUsingEncoding(NSUTF8StringEncoding)
             data.appendData(contentDispositionData!)
-            if let type = valueType {
-                let contentTypeString = "Content-Type: \(type)\r\n"
-                let contentTypeData = contentTypeString.dataUsingEncoding(NSUTF8StringEncoding)
-                data.appendData(contentTypeData!)
-            }
+            // FIXME: `valueType` is never assigned and always nil.
+//            if let type = valueType {
+//                let contentTypeString = "Content-Type: \(type)\r\n"
+//                let contentTypeData = contentTypeString.dataUsingEncoding(NSUTF8StringEncoding)
+//                data.appendData(contentTypeData!)
+//            }
             data.appendData(seperatorData)
             data.appendData(valueData!)
             data.appendData(seperatorData)

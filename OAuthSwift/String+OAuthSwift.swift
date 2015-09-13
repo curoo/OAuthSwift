@@ -113,14 +113,6 @@ extension String {
     func size()->Int{
         return self.utf16.count
     }
-    //重复字符串
-    func `repeat`(times: Int) -> String{
-        var result = ""
-        for i in 0..<times {
-            result += self
-        }
-        return result
-    }
     //反转
     func reverse()-> String{
         let s=Array(self.split("").reverse())
